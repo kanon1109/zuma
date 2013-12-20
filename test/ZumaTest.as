@@ -24,11 +24,29 @@ public class ZumaTest extends Sprite
     private var colorType:int = 5;
     //颜色列表
     private var colorAry:Array = [null, 0xFF00FF, 0xFFFF00, 0x0000FF, 0xCCFF00, 0x00CCFF];
+    //地图列表
+    private var mapList:Array;
     public function ZumaTest() 
     {
         stage.addEventListener(MouseEvent.MOUSE_DOWN, mouseDownHandler);
         this.addEventListener(Event.ENTER_FRAME, loop);
+        this.initMap();
         this.initUI();
+    }
+    
+    /**
+     * 初始化地图
+     */
+    private function initMap():void
+    {
+        this.mapList = [];
+        var sx:Number = 50;
+        var sy:Number = 50;
+        var gapH:Number = 10;
+        for (var i:int = 0; i < 10; i += 1)
+        {
+            this.mapList.push([i * gapH + sx, sy]);
+        }
     }
     
     /**
@@ -37,9 +55,17 @@ public class ZumaTest extends Sprite
     private function initUI():void
     {
         this.cannon = new Cannon(300, 250, 10);
-        this.zuma = new Zuma([], 10, 15, this.colorType, new Rectangle(0, 0, stage.stageWidth, stage.stageHeight), 3);
+        this.zuma = new Zuma(this.mapList, 10, 15, this.colorType, 
+                                new Rectangle(0, 0, stage.stageWidth, stage.stageHeight), 3);
         this.zuma.addEventListener(ZumaEvent.REMOVE, removeBallHandler);
+        this.zuma.addEventListener(ZumaEvent.ADD, addBallHandler);
         this.aimMc = this.getChildByName("aim_mc") as Sprite;
+    }
+    
+    private function addBallHandler(event:ZumaEvent):void 
+    {
+        var bVo:BallVo = event.bVo as BallVo;
+        this.drawBall(bVo);
     }
     
     private function removeBallHandler(event:ZumaEvent):void 
@@ -86,8 +112,7 @@ public class ZumaTest extends Sprite
     {
         var vx:Number = Math.cos(this.cannon.angle) * this.cannon.power;
         var vy:Number = Math.sin(this.cannon.angle) * this.cannon.power;
-        var bVo:BallVo = this.zuma.addBall(this.cannon.startX, this.cannon.startY, vx, vy, Random.randint(1, this.colorType));
-        this.drawBall(bVo);
+        this.zuma.addBall(this.cannon.startX, this.cannon.startY, vx, vy, Random.randint(1, this.colorType));
     }
     
     /**
@@ -98,8 +123,6 @@ public class ZumaTest extends Sprite
         var bVo:BallVo;
 		for each (bVo in this.zuma.ballDict) 
 		{
-			bVo.x += bVo.vx;
-			bVo.y += bVo.vy;
 			if (bVo.userData && bVo.userData is DisplayObject)
             {
                 Sprite(bVo.userData).x = bVo.x;

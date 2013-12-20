@@ -8,8 +8,10 @@ import flash.events.Event;
  */
 public class ZumaEvent extends Event 
 {
-    /**销毁事件*/
+    /**销毁球事件*/
     public static const REMOVE:String = "remove";
+    /**添加球事件*/
+    static public const ADD:String = "add";
     /**球数据*/
     public var bVo:BallVo;
     public function ZumaEvent(type:String, bVo:BallVo = null, bubbles:Boolean = false, cancelable:Boolean = false)

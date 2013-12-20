@@ -18,7 +18,13 @@ public class BallVo
     public var vy:Number;
     /**半径*/
     public var radius:Number;
+    /**当前地图索引*/
+    public var mapIndex:int;
     /**用户数据*/
     public var userData:*;
+    /**下一个球数据*/
+    public var next:BallVo;
+    /**上一个球数据*/
+    public var prev:BallVo;
 }
 }
