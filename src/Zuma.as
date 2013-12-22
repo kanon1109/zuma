@@ -1,4 +1,4 @@
-package  
+﻿package  
 {
 import data.BallVo;
 import events.ZumaEvent;
@@ -19,7 +19,7 @@ public class Zuma extends EventDispatcher
     private var rollInCount:uint
     //球的半径
     private var radius:Number;
-    //地图列表
+    //地图列表[[x, y, angle], [x, y, angle]]
     private var mapList:Array;
     //球列表的数组
     private var ballList:Array;
@@ -37,14 +37,20 @@ public class Zuma extends EventDispatcher
     private var addBallEvent:ZumaEvent;
     //速度
     private var speed:Number;
+	//普通速度
+	private const GENERAL_SPEED:Number = .8;
     //滚入滚出速度
-    private var rollSpeed:Number;
+    private const ROLL_SPEED:Number = 2;
     //滚入距离 最后一个球大于距离则创建球
     private var rollDis:Number;
+	//进入下一个地图索引需要的最小距离
+    private var minDis:Number;
     //是否滚入完成
     private var rollInited:Boolean;
+	//游戏失败
+	private var fail:Boolean;
     /**
-     * @param	mapList         地图坐标列表 二维数组
+     * @param	mapList         地图坐标列表 二维数组 [[x, y, angle], [x, y, angle]]
      * @param	rollInCount     滚入数量
      * @param	radius          半径
      * @param	colorType       颜色种类
@@ -68,9 +74,10 @@ public class Zuma extends EventDispatcher
      */
     private function initData():void
     {
-        this.rollSpeed = 2;
-        this.speed = 0;
+        this.speed = ROLL_SPEED;
+		this.fail = false;
         this.rollDis = this.radius * 2;
+        this.minDis = 1.5;
         this.ballList = [];
         this._ballDict = new Dictionary();
         this.shootBallDict = new Dictionary();
@@ -95,9 +102,10 @@ public class Zuma extends EventDispatcher
         var bVo:BallVo;
         var vx:Number;
         var vy:Number;
-        var angle:Number;
-        var startX:Number = this.mapList[0][0];
-        var startY:Number = this.mapList[0][1];
+		var dataAry:Array = this.mapList[0];
+        var startX:Number = dataAry[0];
+        var startY:Number = dataAry[1];
+		var angle:Number = MathUtil.dgs2rds(dataAry[2]);
         //上一个球的数据
         var prevBall:BallVo;
         if (this.ballList.length < this.rollInCount)
@@ -107,11 +115,10 @@ public class Zuma extends EventDispatcher
             {
                 bVo = this.createBall(0, 0, 0, 0, Random.randint(1, this.colorType));
                 bVo.mapIndex = 0;
-                angle = this.getMapNodeAngle(bVo.mapIndex);
                 bVo.x = startX;
                 bVo.y = startY;
-                vx = Math.cos(angle) * this.rollSpeed;
-                vy = Math.sin(angle) * this.rollSpeed;
+				vx = Math.cos(angle) * this.speed;
+				vy = Math.sin(angle) * this.speed;
                 bVo.vx = vx;
                 bVo.vy = vy;
                 bVo.next = null;
@@ -130,9 +137,8 @@ public class Zuma extends EventDispatcher
                     bVo = this.createBall(startX, startY, 0, 0, Random.randint(1, this.colorType));
                     bVo.next = prevBall;
                     bVo.mapIndex = 0;
-                    angle = this.getMapNodeAngle(bVo.mapIndex);
-                    vx = Math.cos(angle) * this.rollSpeed;
-                    vy = Math.sin(angle) * this.rollSpeed;
+                    vx = Math.cos(angle) * this.speed;
+                    vy = Math.sin(angle) * this.speed;
                     bVo.vx = vx;
                     bVo.vy = vy;
                     prevBall.prev = bVo;
@@ -145,11 +151,13 @@ public class Zuma extends EventDispatcher
         else 
         {
             //滚入结束 设置为普通速度
+			this.speed = GENERAL_SPEED;
             var length:int = this.ballList.length;
             for (var i:int = 0; i < length; i += 1) 
             {
                 bVo = this.ballList[i];
-                angle = this.getMapNodeAngle(bVo.mapIndex);
+				angle = this.mapList[bVo.mapIndex][2];
+				angle = MathUtil.dgs2rds(angle);
                 bVo.vx = Math.cos(angle) * this.speed;
                 bVo.vy = Math.sin(angle) * this.speed;
             }
@@ -207,22 +215,32 @@ public class Zuma extends EventDispatcher
         this._ballDict[bVo] = bVo;
         return bVo;
     }
-    
-    /**
-     * 获取2个地图节点的夹角
-     * @param	index   当前地图节点索引
-     * @return  地图节点的夹角   
-     */
-    private function getMapNodeAngle(index:int):Number
-    {
-        if (!this.mapList || this.mapList.length == 0) return 0;
-        if (index >= this.mapList.length - 1) return 0;
-        var posX:Number = this.mapList[index][0];
-        var posY:Number = this.mapList[index][1];
-        var nextPosX:Number = this.mapList[index + 1][0];
-        var nextPosY:Number = this.mapList[index + 1][1];
-        return Math.atan2(nextPosY - posY, nextPosX - posX);
-    }
+	
+	/**
+	 * 判断当前球地图索引
+	 * @param	bVo 球数据
+	 */
+	private function checkMapIndex(bVo:BallVo):void
+	{
+		if (bVo.mapIndex >= this.mapList.length - 1) 
+		{
+			this.fail = true;
+			return;
+		}
+		var dataAry:Array = this.mapList[bVo.mapIndex + 1];
+		var x:Number = dataAry[0];
+		var y:Number = dataAry[1];
+		var angle:Number = MathUtil.dgs2rds(dataAry[2]);
+		//TODO怎样正确计算出 所在的地图索引
+		if (MathUtil.distance(x, y, bVo.x, bVo.y) <= this.minDis)
+		{
+			bVo.mapIndex++;
+			bVo.vx = Math.cos(angle) * this.speed;
+			bVo.vy = Math.sin(angle) * this.speed;
+			bVo.x = x;
+			bVo.y = y;
+		}
+	}
     
     /**
      * 移动
@@ -233,8 +251,9 @@ public class Zuma extends EventDispatcher
         var bVo:BallVo;
         for each (bVo in this._ballDict) 
         {
-            bVo.x += bVo.vx;
-            bVo.y += bVo.vy;
+			this.checkMapIndex(bVo);
+			bVo.x += bVo.vx;
+			bVo.y += bVo.vy;
         }
     }
     
@@ -246,21 +265,24 @@ public class Zuma extends EventDispatcher
         var shootBVo:BallVo;
         var bVo:BallVo;
         var length:int = this.ballList.length;
+		var nextDis:Number;
+		var prevDis:Number;
         for each (shootBVo in this.shootBallDict)
         {
             for (var i:int = 0; i < length; i += 1) 
             {
                 bVo = this.ballList[i];
-                if (MathUtil.distance(shootBVo.x,
-                                      shootBVo.y, 
-                                      bVo.x, 
-                                      bVo.y) <= this.radius * 2)
+                if (MathUtil.distance(shootBVo.x, shootBVo.y, 
+                                      bVo.x, bVo.y) <= this.radius * 2)
                 {
-                    
+					delete this.shootBallDict[shootBVo];
+					shootBVo.vx = 0;
+					shootBVo.vy = 0;
                 }
             }
         }
     }
+	
     
     //***********public function***********
     /**
@@ -268,6 +290,7 @@ public class Zuma extends EventDispatcher
      */
     public function update():void
     {
+		if (this.fail) return;
         this.initRollBall();
         this.checkRange();
         this.move();
