@@ -37,10 +37,10 @@ public class Zuma extends EventDispatcher
     private var addBallEvent:ZumaEvent;
     //速度
     private var speed:Number;
-	//普通速度
-	private const GENERAL_SPEED:Number = 1;
     //滚入滚出速度
     private const ROLL_SPEED:Number = 2;
+	//普通速度 普通速度一般为滚入速度的1/2
+	private const GENERAL_SPEED:Number = 1;
     //滚入距离 最后一个球大于距离则创建球
     private var rollDis:Number;
 	//进入下一个地图索引需要的最小距离
