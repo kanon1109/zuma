@@ -38,7 +38,7 @@ public class Zuma extends EventDispatcher
     //速度
     private var speed:Number;
 	//普通速度
-	private const GENERAL_SPEED:Number = .8;
+	private const GENERAL_SPEED:Number = 1;
     //滚入滚出速度
     private const ROLL_SPEED:Number = 2;
     //滚入距离 最后一个球大于距离则创建球
@@ -77,7 +77,7 @@ public class Zuma extends EventDispatcher
         this.speed = ROLL_SPEED;
 		this.fail = false;
         this.rollDis = this.radius * 2;
-        this.minDis = 1.5;
+        this.minDis = 0;
         this.ballList = [];
         this._ballDict = new Dictionary();
         this.shootBallDict = new Dictionary();
@@ -232,7 +232,7 @@ public class Zuma extends EventDispatcher
 		var y:Number = dataAry[1];
 		var angle:Number = MathUtil.dgs2rds(dataAry[2]);
 		//TODO怎样正确计算出 所在的地图索引
-		if (MathUtil.distance(x, y, bVo.x, bVo.y) <= this.minDis)
+		if (Math.floor(MathUtil.distance(x, y, bVo.x, bVo.y)) <= this.minDis)
 		{
 			bVo.mapIndex++;
 			bVo.vx = Math.cos(angle) * this.speed;
