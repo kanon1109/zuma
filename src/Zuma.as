@@ -276,12 +276,31 @@ public class Zuma extends EventDispatcher
                                       bVo.x, bVo.y) <= this.radius * 2)
                 {
 					delete this.shootBallDict[shootBVo];
-					shootBVo.vx = 0;
-					shootBVo.vy = 0;
+					shootBVo.vx = bVo.vx;
+					shootBVo.vy = bVo.vy;
+                    shootBVo.x = bVo.x;
+                    shootBVo.y = bVo.y;
+                    shootBVo.mapIndex = bVo.mapIndex;
+                    //nextDis = bVo.next;
+                    //prevDis = bVo.prev;
+                    
+                    /*bVo.mapIndex++;
+                    var dataAry:Array = this.mapList[bVo.mapIndex];
+                    var angle:Number = MathUtil.dgs2rds(dataAry[2]);
+                    var x:Number = dataAry[0];
+                    var y:Number = dataAry[1];
+                    //bVo.x += Math.cos(angle) * bVo.radius * 2;
+                    //bVo.y += Math.sin(angle) * bVo.radius * 2;
+                    bVo.vx = Math.cos(angle) * this.speed;
+                    bVo.vy = Math.sin(angle) * this.speed;*/
+                    break;
                 }
             }
         }
     }
+    
+    
+    //private function 
 	
     
     //***********public function***********

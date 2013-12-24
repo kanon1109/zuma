@@ -10,15 +10,18 @@ import flash.events.MouseEvent;
 public class MapTest extends Sprite 
 {
 	private var mapEditor:MapEditor;
+    //线段的宽度 一般为球的半径
+    private var lineMinWidth:int = 16;
 	public function MapTest() 
 	{
-		this.mapEditor = new MapEditor(15);
+		this.mapEditor = new MapEditor(this.lineMinWidth * 2);
 		stage.addEventListener(MouseEvent.MOUSE_DOWN, mouseDownHandler);
 		stage.addEventListener(MouseEvent.MOUSE_UP, mouseUpHandler);
 	}
 	
 	private function mouseDownHandler(event:MouseEvent):void 
 	{
+        this.graphics.clear();
 		this.graphics.lineStyle(2, 0xFF0000);
 		this.graphics.moveTo(mouseX, mouseY);
 		this.mapEditor.init();
@@ -30,7 +33,6 @@ public class MapTest extends Sprite
 	private function mouseUpHandler(event:MouseEvent):void 
 	{
 		this.removeEventListener(Event.ENTER_FRAME, loop);
-		this.graphics.clear();
 		var arr:Array;
 		var length:int = this.mapEditor.mapList.length;
 		trace(this.mapEditor.mapToString());
@@ -52,8 +54,9 @@ public class MapTest extends Sprite
 	 */
 	private function drawCircle(x:Number, y:Number):void
 	{
-		this.graphics.beginFill(0xFFF000);
-		this.graphics.drawCircle(x, y, 10);
+		this.graphics.lineStyle(1, 0xFF0000);
+		this.graphics.beginFill(0xFFF000, .5);
+		this.graphics.drawCircle(x, y, this.lineMinWidth);
 		this.graphics.endFill();
 	}
 }
