@@ -100,8 +100,6 @@ public class Zuma extends EventDispatcher
         if (!this.mapList || this.mapList.length == 0) return;
         if (this.rollInited) return;
         var bVo:BallVo;
-        var vx:Number;
-        var vy:Number;
 		var dataAry:Array = this.mapList[0];
         var startX:Number = dataAry[0];
         var startY:Number = dataAry[1];
@@ -117,10 +115,8 @@ public class Zuma extends EventDispatcher
                 bVo.mapIndex = 0;
                 bVo.x = startX;
                 bVo.y = startY;
-				vx = Math.cos(angle) * this.speed;
-				vy = Math.sin(angle) * this.speed;
-                bVo.vx = vx;
-                bVo.vy = vy;
+                bVo.vx = Math.cos(angle) * this.speed;;
+                bVo.vy = Math.sin(angle) * this.speed;;
                 bVo.next = null;
                 this.ballList.unshift(bVo);
                 this.addBallEvent.bVo = bVo;
@@ -137,10 +133,8 @@ public class Zuma extends EventDispatcher
                     bVo = this.createBall(startX, startY, 0, 0, Random.randint(1, this.colorType));
                     bVo.next = prevBall;
                     bVo.mapIndex = 0;
-                    vx = Math.cos(angle) * this.speed;
-                    vy = Math.sin(angle) * this.speed;
-                    bVo.vx = vx;
-                    bVo.vy = vy;
+                    bVo.vx = Math.cos(angle) * this.speed;;
+                    bVo.vy = Math.sin(angle) * this.speed;;
                     prevBall.prev = bVo;
                     this.ballList.unshift(bVo);
                     this.addBallEvent.bVo = bVo;
@@ -265,8 +259,6 @@ public class Zuma extends EventDispatcher
         var shootBVo:BallVo;
         var bVo:BallVo;
         var length:int = this.ballList.length;
-		var nextDis:Number;
-		var prevDis:Number;
         for each (shootBVo in this.shootBallDict)
         {
             for (var i:int = 0; i < length; i += 1) 
@@ -276,32 +268,55 @@ public class Zuma extends EventDispatcher
                                       bVo.x, bVo.y) <= this.radius * 2)
                 {
 					delete this.shootBallDict[shootBVo];
-					shootBVo.vx = bVo.vx;
+					/*shootBVo.vx = bVo.vx;
 					shootBVo.vy = bVo.vy;
                     shootBVo.x = bVo.x;
                     shootBVo.y = bVo.y;
-                    shootBVo.mapIndex = bVo.mapIndex;
-                    //nextDis = bVo.next;
-                    //prevDis = bVo.prev;
+                    shootBVo.mapIndex = bVo.mapIndex;*/
                     
-                    /*bVo.mapIndex++;
                     var dataAry:Array = this.mapList[bVo.mapIndex];
-                    var angle:Number = MathUtil.dgs2rds(dataAry[2]);
-                    var x:Number = dataAry[0];
-                    var y:Number = dataAry[1];
-                    //bVo.x += Math.cos(angle) * bVo.radius * 2;
-                    //bVo.y += Math.sin(angle) * bVo.radius * 2;
-                    bVo.vx = Math.cos(angle) * this.speed;
-                    bVo.vy = Math.sin(angle) * this.speed;*/
+                    var x:int = dataAry[0];
+                    var y:int = dataAry[1];
+                    var angle:int = dataAry[2];
+                    var dis:Number = this.radius * 2;
+                    var len:int = dis / this.speed;
+                    var dx:Number;
+                    var dy:Number;
+                    //循环线段线路
+                    trace("----------in-----------")
+                    for (var j:int = 0; j <=len; j += 1) 
+                    {
+                        dx = x + Math.round(Math.cos(MathUtil.dgs2rds(angle)) * j);
+                        dy = y + Math.round(Math.sin(MathUtil.dgs2rds(angle)) * j);
+                        trace("x, dx", Math.round(bVo.x), dx);
+                        trace("y, dy", Math.round(bVo.y), dy);
+                        if (Math.round(bVo.x) == dx && 
+                            Math.round(bVo.y) == dy)
+                        {
+                            //trace("************J**************",  j);
+                            bVo.mapIndex++;
+                            var ary:Array = this.mapList[bVo.mapIndex];
+                            var lx:int = ary[0];
+                            var ly:int = ary[1];
+                            var a:int = ary[2];
+                            var cos:Number = Math.cos(MathUtil.dgs2rds(a));
+                            var sin:Number = Math.sin(MathUtil.dgs2rds(a));
+                            bVo.x = lx + Math.round(cos * j);
+                            bVo.y = ly + Math.round(sin * j);
+                            bVo.vx = cos * this.speed;
+                            bVo.vy = sin * this.speed;
+                            break;
+                        }
+                    }
+                    if (j == len)
+                    {
+                        trace("----------漏-----------")
+                    }
                     break;
                 }
             }
         }
     }
-    
-    
-    //private function 
-	
     
     //***********public function***********
     /**
@@ -312,8 +327,8 @@ public class Zuma extends EventDispatcher
 		if (this.fail) return;
         this.initRollBall();
         this.checkRange();
-        this.move();
         this.hitTest();
+        this.move();
     }
     
     /**
