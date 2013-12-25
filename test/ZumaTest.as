@@ -139,6 +139,14 @@ public class ZumaTest extends Sprite
                 Sprite(bVo.userData).y = bVo.y;
             }
 		}
+		for each (bVo in this.zuma.shootBallDict) 
+		{
+			if (bVo.userData && bVo.userData is DisplayObject)
+            {
+                Sprite(bVo.userData).x = bVo.x;
+                Sprite(bVo.userData).y = bVo.y;
+            }
+		}
     }
     
     private function loop(event:Event):void 
