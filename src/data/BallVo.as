@@ -26,5 +26,7 @@ public class BallVo
     public var next:BallVo;
     /**上一个球数据*/
     public var prev:BallVo;
+    /**目标索引*/
+    public var targetIndex:int;
 }
 }

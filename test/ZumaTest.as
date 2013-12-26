@@ -25,11 +25,12 @@ public class ZumaTest extends Sprite
     //颜色类型
     private var colorType:int = 5;
     //颜色列表
-    private var colorAry:Array = [null, 0xFF00FF, 0xFFFF00, 0x0000FF, 0xCCFF00, 0x00CCFF];
+    private var colorAry:Array = [null, 0xFF00FF, 0xFFFF00, 0x0000FF/*, 0xCCFF00, 0x00CCFF*/];
     //地图列表
     private var mapList:Array;
     public function ZumaTest() 
     {
+        this.colorType = colorAry.length - 1;
         stage.addEventListener(MouseEvent.MOUSE_DOWN, mouseDownHandler);
         stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDownHandler);
         this.addEventListener(Event.ENTER_FRAME, loop);
@@ -40,7 +41,7 @@ public class ZumaTest extends Sprite
     private function onKeyDownHandler(event:KeyboardEvent):void 
     {
         if (event.keyCode == Keyboard.S) this.removeEventListener(Event.ENTER_FRAME, loop);
-        else this.addEventListener(Event.ENTER_FRAME, loop);
+        else if (event.keyCode == Keyboard.A) this.addEventListener(Event.ENTER_FRAME, loop);
     }
     
     /**
@@ -65,7 +66,7 @@ public class ZumaTest extends Sprite
     private function initUI():void
     {
         this.cannon = new Cannon(300, 250, 10);
-        this.zuma = new Zuma(this.mapList, 10, 16, this.colorType, 
+        this.zuma = new Zuma(this.mapList, 4, 16, this.colorType, 
                                 new Rectangle(0, 0, stage.stageWidth, stage.stageHeight), 3);
         this.zuma.addEventListener(ZumaEvent.REMOVE, removeBallHandler);
         this.zuma.addEventListener(ZumaEvent.ADD, addBallHandler);
@@ -131,15 +132,7 @@ public class ZumaTest extends Sprite
     private function render():void
     {
         var bVo:BallVo;
-		for each (bVo in this.zuma.ballDict) 
-		{
-			if (bVo.userData && bVo.userData is DisplayObject)
-            {
-                Sprite(bVo.userData).x = bVo.x;
-                Sprite(bVo.userData).y = bVo.y;
-            }
-		}
-		for each (bVo in this.zuma.shootBallDict) 
+		for each (bVo in this.zuma.allBallDict) 
 		{
 			if (bVo.userData && bVo.userData is DisplayObject)
             {

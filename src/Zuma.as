@@ -1,7 +1,9 @@
 ﻿package  
 {
+import com.greensock.TweenMax;
 import data.BallVo;
 import events.ZumaEvent;
+import fl.transitions.easing.None;
 import flash.events.EventDispatcher;
 import flash.geom.Rectangle;
 import flash.utils.Dictionary;
@@ -24,10 +26,12 @@ public class Zuma extends EventDispatcher
     private var mapList:Array;
     //球列表的数组
     private var ballList:Array;
-    //存放所有球的字典
-    private var _ballDict:Dictionary;
+    //沿路径移动的所有球的字典
+    private var ballMoveDict:Dictionary;
     //射出的球的字典
-    private var _shootBallDict:Dictionary;
+    private var shootBallDict:Dictionary;
+    //所有球的字典
+    private var _allBallDict:Dictionary;
     //颜色种类
     private var colorType:uint;
     //运动范围
@@ -54,6 +58,8 @@ public class Zuma extends EventDispatcher
 	private var fail:Boolean;
 	//位置坐标
 	private var posList:Array;
+    //插入待移动的列表
+    private var insertMoveList:Array;
     /**
      * @param	mapList         地图坐标列表 二维数组 [[x, y, angle], [x, y, angle]]
      * @param	rollInCount     滚入数量
@@ -85,9 +91,11 @@ public class Zuma extends EventDispatcher
         this.rollDis = this.radius * 2;
         this.minDis = 0;
         this.ballList = [];
-        this._ballDict = new Dictionary();
-        this._shootBallDict = new Dictionary();
+        this.ballMoveDict = new Dictionary();
+        this.shootBallDict = new Dictionary();
+        this._allBallDict = new Dictionary();
 		this.posList = [];
+		this.insertMoveList = [];
 		
 		var dataAry:Array;
 		var length:int = this.mapList.length;
@@ -147,7 +155,8 @@ public class Zuma extends EventDispatcher
             if (this.ballList.length == 0)
             {
                 bVo = this.createBall(0, 0, 0, 0, Random.randint(1, this.colorType), this.radius);
-				this._ballDict[bVo] = bVo;
+				this.ballMoveDict[bVo] = bVo;
+				this._allBallDict[bVo] = bVo;
                 bVo.x = startX;
                 bVo.y = startY;
                 bVo.next = null;
@@ -164,7 +173,8 @@ public class Zuma extends EventDispatcher
                 {
                     prevBall = bVo;
                     bVo = this.createBall(startX, startY, 0, 0, Random.randint(1, this.colorType), this.radius);
-					this._ballDict[bVo] = bVo;
+					this.ballMoveDict[bVo] = bVo;
+					this._allBallDict[bVo] = bVo;
                     bVo.next = prevBall;
                     prevBall.prev = bVo;
                     this.ballList.unshift(bVo);
@@ -200,8 +210,9 @@ public class Zuma extends EventDispatcher
      */
     private function removeBall(bVo:BallVo):void
     {
-        delete this._ballDict[bVo];
-        delete this._shootBallDict[bVo];
+        delete this.ballMoveDict[bVo];
+        delete this._allBallDict[bVo];
+        delete this.shootBallDict[bVo];
         this.removeBallEvent.bVo = bVo;
         this.dispatchEvent(this.removeBallEvent);
     }
@@ -233,9 +244,9 @@ public class Zuma extends EventDispatcher
 	 */
 	private function shootMove():void
 	{
-		if (!this._shootBallDict) return;
+		if (!this.shootBallDict) return;
 		var bVo:BallVo;
-        for each (bVo in this._shootBallDict) 
+        for each (bVo in this.shootBallDict) 
         {
 			bVo.x += bVo.vx;
 			bVo.y += bVo.vy;
@@ -248,10 +259,10 @@ public class Zuma extends EventDispatcher
      */
     private function move():void 
     {
-        if (!this._ballDict) return;
+        if (!this.ballMoveDict) return;
         var bVo:BallVo;
 		var arr:Array;
-        for each (bVo in this._ballDict) 
+        for each (bVo in this.ballMoveDict) 
         {
 			arr = this.posList[bVo.posIndex];
 			bVo.x = arr[0];
@@ -268,37 +279,138 @@ public class Zuma extends EventDispatcher
         var shootBVo:BallVo;
         var bVo:BallVo;
         var length:int = this.ballList.length;
-        for each (shootBVo in this._shootBallDict)
+        //是否向前
+        var isForward:Boolean;
+        //trace("length", length);
+        for each (shootBVo in this.shootBallDict)
         {
-            for (var i:int = 0; i < length; i += 1) 
+            for (var i:int = length - 1; i >= 0; i -= 1) 
             {
                 bVo = this.ballList[i];
-                if (MathUtil.distance(shootBVo.x, shootBVo.y, 
-                                      bVo.x, bVo.y) <= this.radius * 2)
+                bVo = this.ballList[i];
+                if (MathUtil.distance(shootBVo.x, 
+                                      shootBVo.y, 
+                                      bVo.x, 
+                                      bVo.y) <= this.radius * 2)
                 {
-					shootBVo.vx = 0;
-					shootBVo.vy = 0;
-                    shootBVo.x = bVo.x;
-                    shootBVo.y = bVo.y;
-					shootBVo.posIndex = bVo.posIndex;
-					delete this._shootBallDict[shootBVo];
-					var posAry:Array = this.getInsertPos(bVo, shootBVo);	
-					bVo.x = posAry[0];
-					bVo.y = posAry[1];
-					bVo.posIndex += this.ballStep; 
+                    //true插入前面 false插入后面
+                    isForward = this.checkInsertPos(bVo, shootBVo);	
+                    trace("isForward", isForward, "i", i);
+                    //插入球
+                    this.insertBall(isForward, bVo, shootBVo, i);
+                    //删除发射球
+                    this.removeBall(shootBVo);
                     break;
                 }
             }
         }
     }
+    
+    /**
+     * 数组插入元素
+     * @param	index   插入索引
+     * @param	value   插入的元素
+     * @return  插入的元素 未插入则返回空
+     */
+    private function insert(ary:Array, index:int, value:*):*
+    {
+        if (!ary) return null;
+        var length:int = ary.length;
+        if (index > length) index = length;
+        if (index < 0) index = 0;
+        if (index == length) ary.push(value); //插入最后
+        else if (index == 0) ary.unshift(value); //插入头
+        else
+        {
+            for (var i:int = length - 1; i >= index; i -= 1) 
+            {
+                ary[i + 1] = ary[i];
+            }
+            ary[index] = value;
+        }
+        return value;
+    }
+    
+    /**
+     * 插入球
+     * @param	isForward   true插入前面 false插入后面
+     * @param	hitBVo      碰撞的球数据
+     * @param	shootBVo    射出的球数据
+     * @param	index       碰撞的球在ballList中的索引
+     */
+    private function insertBall(isForward:Boolean, hitBVo:BallVo, shootBVo:BallVo, index:int):void
+    {
+        var length:int = this.ballList.length;
+        var newBVo:BallVo = this.createBall(shootBVo.x, shootBVo.y, 0, 0, shootBVo.color, this.radius);
+        var posAry:Array;
+        var posIndex:int;
+        //碰撞到最后一个不需要插入
+        var start:int = index;
+        if (index == length - 1 && isForward) 
+        {
+            posAry = this.posList[hitBVo.posIndex + this.ballStep];
+            posIndex = hitBVo.posIndex + this.ballStep;
+        }
+        else
+        {
+            var bVo:BallVo;
+            //如果是插入前面
+            if (isForward) 
+            {
+                start += 1;
+                posAry = this.posList[hitBVo.posIndex + this.ballStep];
+                posIndex = hitBVo.posIndex + this.ballStep;
+            }
+            else
+            {
+                posAry = this.posList[hitBVo.posIndex];
+                posIndex = hitBVo.posIndex;
+            }
+            for (var i:int = start; i < length; i += 1)
+            {
+                bVo = this.ballList[i];
+            }
+            this.insertMoveList.push(bVo);
+        }
+        this.insert(this.ballList, start, newBVo);
+        TweenMax.to(newBVo, 0.2, { x:posAry[0], y:posAry[1], 
+                                    ease:None.easeNone, 
+                                    onComplete:insertMoveComplete, 
+                                    onCompleteParams:[newBVo, posIndex] } );
+        this._allBallDict[newBVo] = newBVo;
+        this.addBallEvent.bVo = newBVo;
+        this.dispatchEvent(this.addBallEvent);
+    }
+    
+    private function insertMoveComplete(newBVo:BallVo, posIndex:int):void 
+    {
+        newBVo.posIndex = posIndex;
+        this.ballMoveDict[newBVo] = newBVo;
+    }
+    
+    /**
+     * 插入移动
+     */
+    private function insertMove():void
+    {
+        if (!this.insertMoveList) return;
+        var length:int = this.insertMoveList.length;
+        var bVo:BallVo;
+        var arr:Array;
+        for (var i:int = length - 1; i >= 0; i -= 1) 
+        {
+            //ballAry = this.insertMoveList[i];
+            //bVo = ballAry[0];
+        }
+    }
 	
 	/**
-	 * 获取插入位置
+	 * 判断是否向前或向后插入
 	 * @param	hitBVo		碰撞球数据
 	 * @param	shootBVo	射出的球数据
-	 * @return	
+	 * @return	true插入前面 false插入后面
 	 */
-	private function getInsertPos(hitBVo:BallVo, shootBVo:BallVo):Array
+	private function checkInsertPos(hitBVo:BallVo, shootBVo:BallVo):Boolean
 	{
 		//上一个位置的索引
 		var nextPosIndex:int;
@@ -307,20 +419,12 @@ public class Zuma extends EventDispatcher
 		var posAry:Array;
 		var x:Number;
 		var y:Number;
+        //下一个步长坐标索引
 		nextPosIndex = hitBVo.posIndex + this.ballStep;
+        //上一个步长坐标索引
 		prevPosIndex = hitBVo.posIndex - this.ballStep;
-		if (prevPosIndex < 0) 
-		{
-			//右边坐标
-			posAry = this.posList[nextPosIndex];
-			return posAry;
-		}
-		if (nextPosIndex >= this.posList.length) 
-		{
-			//左边坐标
-			posAry = this.posList[prevPosIndex];
-			return posAry;
-		}
+		if (prevPosIndex < 0) return false; //插入后面
+		if (nextPosIndex >= this.posList.length) return true;//插入前面
 		//下一个坐标的距离
 		posAry = this.posList[nextPosIndex];
 		x = posAry[0];
@@ -331,14 +435,21 @@ public class Zuma extends EventDispatcher
 		x = posAry[0];
 		y = posAry[1];
 		var prevDis:Number = MathUtil.distance(x, y, shootBVo.x, shootBVo.y);
-		if (nextDis < prevDis)
-		{
-			posAry = this.posList[nextPosIndex];
-			return posAry;
-		}
-		posAry = this.posList[prevPosIndex];
-		return posAry;
+        trace("nextDis, prevDis", nextDis, prevDis);
+		if (nextDis < prevDis) return true;
+		return false
 	}
+    
+    /**
+     * 颜色字符串
+     * @param	color   颜色
+     * @return  颜色字符串
+     */
+    private function colorToString(color:uint):String
+    {
+        var arr:Array = ["粉", "黄", "蓝"];
+        return arr[color - 1];
+    }
     
     //***********public function***********
     /**
@@ -348,6 +459,7 @@ public class Zuma extends EventDispatcher
     {
 		if (this.fail) return;
         this.initRollBall();
+        this.insertMove();
         this.shootMove();
         this.hitTest();
         this.move();
@@ -364,7 +476,8 @@ public class Zuma extends EventDispatcher
     public function addBall(x:Number, y:Number, vx:Number, vy:Number, color:uint):void
     {
         var bVo:BallVo = this.createBall(x, y, vx, vy, color, this.radius);
-        this._shootBallDict[bVo] = bVo;
+        this.shootBallDict[bVo] = bVo;
+        this._allBallDict[bVo] = bVo;
         this.addBallEvent.bVo = bVo;
         this.dispatchEvent(this.addBallEvent);
     }
@@ -375,18 +488,15 @@ public class Zuma extends EventDispatcher
     public function destroy():void
     {
         this.ballList = null;
-        this._ballDict = null;
-        this._shootBallDict = null;
+        this.ballMoveDict = null;
+        this.shootBallDict = null;
+        this._allBallDict = null;
+        this.insertMoveList = null;
     }
     
     /**
-     * 球的字典
+     * 所有球的字典
      */
-    public function get ballDict():Dictionary { return _ballDict; }
-	
-	/**
-	 * 射出球的字典
-	 */
-	public function get shootBallDict():Dictionary{ return _shootBallDict; }
+    public function get allBallDict():Dictionary { return _allBallDict; };
 }
 }
